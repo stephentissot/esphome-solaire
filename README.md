@@ -13,5 +13,7 @@ Carte utilisée pour le Deye : https://github.com/slipx06/sunsynk-power-flow-card
 
 
 L'ESP32: j'ai choisi un wt32_ETH01 car il intègre un module Ethernet (LAN8720) et un module WiFi. Dans le fichier espdeye.yaml, c'est l'ethernet qui est utilisé.
-<img src="./images/wt32_eth01.jpg" width="300">
+<br/>
+<img src="images/wt32_pinout_large.png" alt="WT32_ETH01" width="300">
+
 	
