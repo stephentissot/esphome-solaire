@@ -10,3 +10,8 @@ Sur cet onduleur, ne pas utiliser les fils 1/2 du RJ45 "BMS" (marque RS485/CAN),
 A venir : schema électronique et matériel utilisé.
 
 Carte utilisée pour le Deye : https://github.com/slipx06/sunsynk-power-flow-card
+
+
+L'ESP32: j'ai choisi un wt32_ETH01 car il intègre un module Ethernet (LAN8720) et un module WiFi. Dans le fichier espdeye.yaml, c'est l'ethernet qui est utilisé.
+<img src="./images/wt32_eth01.jpg" width="300">
+	
