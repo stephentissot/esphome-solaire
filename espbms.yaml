@@ -1,0 +1,569 @@
+substitutions:
+  bms0: rs485-bms0
+  bms1: rs485-bms1
+  device_description: "Monitor two JK-BMS via 2 RS485 internal"
+  external_components_source: github://syssi/esphome-jk-bms@main
+  tx_pin_uart_0: GPIO17 #GPIO1 #GPIO16
+  rx_pin_uart_0: GPIO05 #GPIO3 #GPIO17
+  tx_pin_uart_1: GPIO14
+  rx_pin_uart_1: GPIO15
+
+globals:
+  - id: processing
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+esphome:
+  name: espbms
+  friendly_name: ESPBms
+
+esp32:
+  board: esp-wrover-kit
+  framework:
+    type: esp-idf
+
+#esp8266:
+#  board: d1_mini
+
+external_components:
+  - source: ${external_components_source}
+    refresh: 0s
+     
+# Enable Home Assistant API
+api:
+  id: ha
+  encryption:
+    key: "yxdlq/LVHGyLjjsyKfese6uMqzpgMs6HCDEKAjgTlqw="
+
+ota:
+  - platform: esphome
+    password: "c35946b4dee695f99d0a0ae9ff49eff6"
+
+ethernet:
+  id: eth
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk:
+    pin: GPIO0
+    mode: CLK_EXT_IN
+  phy_addr: 1
+  power_pin: GPIO16
+  manual_ip:
+    static_ip: 192.168.1.51
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+
+logger:
+  level: DEBUG #VERBOSE #DEBUG #INFO #VERY_VERBOSE #VERBOSE #DEBUG #INFO #DEBUG
+  #tx_buffer_size: 2048
+
+button:
+  - platform: restart
+    name: "ESPBMS Restart"
+
+uart:
+  - id: uart_0
+    baud_rate: 115200
+    rx_buffer_size: 384
+    tx_pin: ${tx_pin_uart_0}
+    rx_pin: ${rx_pin_uart_0}
+  - id: uart_1
+    baud_rate: 115200
+    rx_buffer_size: 384
+    tx_pin: ${tx_pin_uart_1}
+    rx_pin: ${rx_pin_uart_1}    
+
+jk_modbus:
+  - id: modbus0
+    uart_id: uart_0
+  - id: modbus1
+    uart_id: uart_1
+
+jk_bms:
+  - id: bms0
+    jk_modbus_id: modbus0
+    update_interval: 5s
+  - id: bms1
+    jk_modbus_id: modbus1
+    update_interval: 5s
+
+
+i2c:
+  sda: GPIO33
+  scl: GPIO32
+  scan: True
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+font:
+    # gfonts://family[@weight]
+  - file: "gfonts://Roboto"
+    id: roboto_15
+    size: 15
+
+image:
+  - file: mdi:battery-off
+    id: battery_off
+    type: binary
+    resize: 15x15
+  - file: mdi:battery
+    id: battery
+    type: binary
+    resize: 15x15
+  - file: mdi:battery-heart
+    id: battery_heart
+    type: binary
+    resize: 15x15    
+  - file: mdi:ethernet
+    id: mdiethernet
+    type: binary
+    resize: 25x25    
+  - file: mdi:ethernet-off
+    id: mdiethernet_off
+    type: binary
+    resize: 25x25
+
+interval:
+  - interval: 2s
+    then:
+      - lambda: |- 
+          if(id(ha).is_connected()){
+            if (id(processing) > 19) {         
+              id(processing) = 0;
+            } else {
+              id(processing) += 1;
+            }
+          }
+
+display:
+  - platform: ssd1306_i2c
+    id: i2c_display
+    model: "SSD1306 128x64"
+    address: 0x3C
+    lambda: |-        
+        it.print(0, 0, id(roboto_15), id(homeassistant_time).now().strftime("%H:%M").c_str());
+        it.print(60, 0, id(roboto_15),"0 -");
+        it.print(92, 0, id(roboto_15),"1 -");
+        if(id(bms0OnlineStatus).state){
+          it.image( 75, 0, id(battery) );
+        }
+        else {
+          it.image( 75, 0, id(battery_off) );
+        }
+        if(id(bms1OnlineStatus).state){
+          it.image( 107, 0, id(battery) );
+        }
+        else {
+          it.image( 107, 0, id(battery_off) );
+        }
+        if(id(ha).is_connected()){
+          it.print(22,18, id(roboto_15),id(eth).get_ip_addresses()[0].str().c_str());
+          it.image(50, 37, id(mdiethernet));
+        }
+        else {
+          it.image(50, 37, id(mdiethernet_off));
+        }
+        std::string s(id(processing), '*');
+        it.print(0,60, id(roboto_15),s.c_str());
+
+        
+
+
+
+binary_sensor:
+  - platform: jk_bms
+    jk_bms_id: bms0
+    balancing:
+      name: "${bms0} balancing"
+    balancing_switch:
+      name: "${bms0} balancing switch"
+    charging:
+      name: "${bms0} charging"
+    discharging:
+      name: "${bms0} discharging"
+    dedicated_charger_switch:
+      name: "${bms0} dedicated charger switch"
+    online_status:
+      id: bms0OnlineStatus
+      name: "${bms0} online status"
+  - platform: jk_bms
+    jk_bms_id: bms1
+    balancing:
+      name: "${bms1} balancing"
+    balancing_switch:
+      name: "${bms1} balancing switch"
+    charging:
+      name: "${bms1} charging"
+    discharging:
+      name: "${bms1} discharging"
+    dedicated_charger_switch:
+      name: "${bms1} dedicated charger switch"
+    online_status:
+      id: bms1OnlineStatus
+      name: "${bms1} online status"      
+
+sensor:
+  - platform: jk_bms
+    jk_bms_id: bms0
+    min_cell_voltage:
+      name: "${bms0} min cell voltage"
+    max_cell_voltage:
+      name: "${bms0} max cell voltage"
+    min_voltage_cell:
+      name: "${bms0} min voltage cell"
+    max_voltage_cell:
+      name: "${bms0} max voltage cell"
+    delta_cell_voltage:
+      name: "${bms0} delta cell voltage"
+    average_cell_voltage:
+      name: "${bms0} average cell voltage"
+    cell_voltage_1:
+      name: "${bms0} cell voltage 1"
+    cell_voltage_2:
+      name: "${bms0} cell voltage 2"
+    cell_voltage_3:
+      name: "${bms0} cell voltage 3"
+    cell_voltage_4:
+      name: "${bms0} cell voltage 4"
+    cell_voltage_5:
+      name: "${bms0} cell voltage 5"
+    cell_voltage_6:
+      name: "${bms0} cell voltage 6"
+    cell_voltage_7:
+      name: "${bms0} cell voltage 7"
+    cell_voltage_8:
+      name: "${bms0} cell voltage 8"
+    cell_voltage_9:
+      name: "${bms0} cell voltage 9"
+    cell_voltage_10:
+      name: "${bms0} cell voltage 10"
+    cell_voltage_11:
+      name: "${bms0} cell voltage 11"
+    cell_voltage_12:
+      name: "${bms0} cell voltage 12"
+    cell_voltage_13:
+      name: "${bms0} cell voltage 13"
+    cell_voltage_14:
+      name: "${bms0} cell voltage 14"
+    cell_voltage_15:
+      name: "${bms0} cell voltage 15"
+    cell_voltage_16:
+      name: "${bms0} cell voltage 16"
+    power_tube_temperature:
+      name: "${bms0} power tube temperature"
+    temperature_sensor_1:
+      name: "${bms0} temperature sensor 1"
+    temperature_sensor_2:
+      name: "${bms0} temperature sensor 2"
+    total_voltage:
+      name: "${bms0} total voltage"
+    current:
+      name: "${bms0} current"
+    power:
+      name: "${bms0} power"
+    charging_power:
+      name: "${bms0} charging power"
+    discharging_power:
+      name: "${bms0} discharging power"
+    capacity_remaining:
+      name: "${bms0} capacity remaining"
+    capacity_remaining_derived:
+      name: "${bms0} capacity remaining derived"
+    temperature_sensors:
+      name: "${bms0} temperature sensors"
+    charging_cycles:
+      name: "${bms0} charging cycles"
+    total_charging_cycle_capacity:
+      name: "${bms0} total charging cycle capacity"
+    battery_strings:
+      name: "${bms0} battery strings"
+    errors_bitmask:
+      name: "${bms0} errors bitmask"
+    operation_mode_bitmask:
+      name: "${bms0} operation mode bitmask"
+    total_voltage_overvoltage_protection:
+      name: "${bms0} total voltage overvoltage protection"
+    total_voltage_undervoltage_protection:
+      name: "${bms0} total voltage undervoltage protection"
+    cell_voltage_overvoltage_protection:
+      name: "${bms0} cell voltage overvoltage protection"
+    cell_voltage_overvoltage_recovery:
+      name: "${bms0} cell voltage overvoltage recovery"
+    cell_voltage_overvoltage_delay:
+      name: "${bms0} cell voltage overvoltage delay"
+    cell_voltage_undervoltage_protection:
+      name: "${bms0} cell voltage undervoltage protection"
+    cell_voltage_undervoltage_recovery:
+      name: "${bms0} cell voltage undervoltage recovery"
+    cell_voltage_undervoltage_delay:
+      name: "${bms0} cell voltage undervoltage delay"
+    cell_pressure_difference_protection:
+      name: "${bms0} cell pressure difference protection"
+    discharging_overcurrent_protection:
+      name: "${bms0} discharging overcurrent protection"
+    discharging_overcurrent_delay:
+      name: "${bms0} discharging overcurrent delay"
+    charging_overcurrent_protection:
+      name: "${bms0} charging overcurrent protection"
+    charging_overcurrent_delay:
+      name: "${bms0} charging overcurrent delay"
+    balance_starting_voltage:
+      name: "${bms0} balance starting voltage"
+    balance_opening_pressure_difference:
+      name: "${bms0} balance opening pressure difference"
+    power_tube_temperature_protection:
+      name: "${bms0} power tube temperature protection"
+    power_tube_temperature_recovery:
+      name: "${bms0} power tube temperature recovery"
+    temperature_sensor_temperature_protection:
+      name: "${bms0} temperature sensor temperature protection"
+    temperature_sensor_temperature_recovery:
+      name: "${bms0} temperature sensor temperature recovery"
+    temperature_sensor_temperature_difference_protection:
+      name: "${bms0} temperature sensor temperature difference protection"
+    charging_high_temperature_protection:
+      name: "${bms0} charging high temperature protection"
+    discharging_high_temperature_protection:
+      name: "${bms0} discharging high temperature protection"
+    charging_low_temperature_protection:
+      name: "${bms0} charging low temperature protection"
+    charging_low_temperature_recovery:
+      name: "${bms0} charging low temperature recovery"
+    discharging_low_temperature_protection:
+      name: "${bms0} discharging low temperature protection"
+    discharging_low_temperature_recovery:
+      name: "${bms0} discharging low temperature recovery"
+    total_battery_capacity_setting:
+      name: "${bms0} total battery capacity setting"
+    current_calibration:
+      name: "${bms0} current calibration"
+    device_address:
+      name: "${bms0} device address"
+    sleep_wait_time:
+      name: "${bms0} sleep wait time"
+    alarm_low_volume:
+      name: "${bms0} alarm low volume"
+    manufacturing_date:
+      name: "${bms0} manufacturing date"
+    total_runtime:
+      name: "${bms0} total runtime"
+#    start_current_calibration:
+#      name: "${name} start current calibration"
+    actual_battery_capacity:
+      name: "${bms0} actual battery capacity"
+#    protocol_version:
+#      name: "${name} protocol version"
+
+
+
+  - platform: jk_bms
+    jk_bms_id: bms1
+    min_cell_voltage:
+      name: "${bms1} min cell voltage"
+    max_cell_voltage:
+      name: "${bms1} max cell voltage"
+    min_voltage_cell:
+      name: "${bms1} min voltage cell"
+    max_voltage_cell:
+      name: "${bms1} max voltage cell"
+    delta_cell_voltage:
+      name: "${bms1} delta cell voltage"
+    average_cell_voltage:
+      name: "${bms1} average cell voltage"
+    cell_voltage_1:
+      name: "${bms1} cell voltage 1"
+    cell_voltage_2:
+      name: "${bms1} cell voltage 2"
+    cell_voltage_3:
+      name: "${bms1} cell voltage 3"
+    cell_voltage_4:
+      name: "${bms1} cell voltage 4"
+    cell_voltage_5:
+      name: "${bms1} cell voltage 5"
+    cell_voltage_6:
+      name: "${bms1} cell voltage 6"
+    cell_voltage_7:
+      name: "${bms1} cell voltage 7"
+    cell_voltage_8:
+      name: "${bms1} cell voltage 8"
+    cell_voltage_9:
+      name: "${bms1} cell voltage 9"
+    cell_voltage_10:
+      name: "${bms1} cell voltage 10"
+    cell_voltage_11:
+      name: "${bms1} cell voltage 11"
+    cell_voltage_12:
+      name: "${bms1} cell voltage 12"
+    cell_voltage_13:
+      name: "${bms1} cell voltage 13"
+    cell_voltage_14:
+      name: "${bms1} cell voltage 14"
+    cell_voltage_15:
+      name: "${bms1} cell voltage 15"
+    cell_voltage_16:
+      name: "${bms1} cell voltage 16"
+    power_tube_temperature:
+      name: "${bms1} power tube temperature"
+    temperature_sensor_1:
+      name: "${bms1} temperature sensor 1"
+    temperature_sensor_2:
+      name: "${bms1} temperature sensor 2"
+    total_voltage:
+      name: "${bms1} total voltage"
+    current:
+      name: "${bms1} current"
+    power:
+      name: "${bms1} power"
+    charging_power:
+      name: "${bms1} charging power"
+    discharging_power:
+      name: "${bms1} discharging power"
+    capacity_remaining:
+      name: "${bms1} capacity remaining"
+    capacity_remaining_derived:
+      name: "${bms1} capacity remaining derived"
+    temperature_sensors:
+      name: "${bms1} temperature sensors"
+    charging_cycles:
+      name: "${bms1} charging cycles"
+    total_charging_cycle_capacity:
+      name: "${bms1} total charging cycle capacity"
+    battery_strings:
+      name: "${bms1} battery strings"
+    errors_bitmask:
+      name: "${bms1} errors bitmask"
+    operation_mode_bitmask:
+      name: "${bms1} operation mode bitmask"
+    total_voltage_overvoltage_protection:
+      name: "${bms1} total voltage overvoltage protection"
+    total_voltage_undervoltage_protection:
+      name: "${bms1} total voltage undervoltage protection"
+    cell_voltage_overvoltage_protection:
+      name: "${bms1} cell voltage overvoltage protection"
+    cell_voltage_overvoltage_recovery:
+      name: "${bms1} cell voltage overvoltage recovery"
+    cell_voltage_overvoltage_delay:
+      name: "${bms1} cell voltage overvoltage delay"
+    cell_voltage_undervoltage_protection:
+      name: "${bms1} cell voltage undervoltage protection"
+    cell_voltage_undervoltage_recovery:
+      name: "${bms1} cell voltage undervoltage recovery"
+    cell_voltage_undervoltage_delay:
+      name: "${bms1} cell voltage undervoltage delay"
+    cell_pressure_difference_protection:
+      name: "${bms1} cell pressure difference protection"
+    discharging_overcurrent_protection:
+      name: "${bms1} discharging overcurrent protection"
+    discharging_overcurrent_delay:
+      name: "${bms1} discharging overcurrent delay"
+    charging_overcurrent_protection:
+      name: "${bms1} charging overcurrent protection"
+    charging_overcurrent_delay:
+      name: "${bms1} charging overcurrent delay"
+    balance_starting_voltage:
+      name: "${bms1} balance starting voltage"
+    balance_opening_pressure_difference:
+      name: "${bms1} balance opening pressure difference"
+    power_tube_temperature_protection:
+      name: "${bms1} power tube temperature protection"
+    power_tube_temperature_recovery:
+      name: "${bms1} power tube temperature recovery"
+    temperature_sensor_temperature_protection:
+      name: "${bms1} temperature sensor temperature protection"
+    temperature_sensor_temperature_recovery:
+      name: "${bms1} temperature sensor temperature recovery"
+    temperature_sensor_temperature_difference_protection:
+      name: "${bms1} temperature sensor temperature difference protection"
+    charging_high_temperature_protection:
+      name: "${bms1} charging high temperature protection"
+    discharging_high_temperature_protection:
+      name: "${bms1} discharging high temperature protection"
+    charging_low_temperature_protection:
+      name: "${bms1} charging low temperature protection"
+    charging_low_temperature_recovery:
+      name: "${bms1} charging low temperature recovery"
+    discharging_low_temperature_protection:
+      name: "${bms1} discharging low temperature protection"
+    discharging_low_temperature_recovery:
+      name: "${bms1} discharging low temperature recovery"
+    total_battery_capacity_setting:
+      name: "${bms1} total battery capacity setting"
+    current_calibration:
+      name: "${bms1} current calibration"
+    device_address:
+      name: "${bms1} device address"
+    sleep_wait_time:
+      name: "${bms1} sleep wait time"
+    alarm_low_volume:
+      name: "${bms1} alarm low volume"
+    manufacturing_date:
+      name: "${bms1} manufacturing date"
+    total_runtime:
+      name: "${bms1} total runtime"
+#    start_current_calibration:
+#      name: "${name} start current calibration"
+    actual_battery_capacity:
+      name: "${bms1} actual battery capacity"
+#    protocol_version:
+#      name: "${name} protocol version"
+
+switch:
+  - platform: jk_bms
+    jk_bms_id: bms0
+    charging:
+      name: "${bms0} charging"
+    discharging:
+      name: "${bms0} discharging"
+
+  - platform: jk_bms
+    jk_bms_id: bms1
+    charging:
+      name: "${bms1} charging"
+    discharging:
+      name: "${bms1} discharging"
+
+
+text_sensor:
+  - platform: jk_bms
+    jk_bms_id: bms0
+    errors:
+      name: "${bms0} errors"
+      id: bms0errors
+    operation_mode:
+      name: "${bms0} operation mode"
+    battery_type:
+      name: "${bms0} battery type"
+    password:
+      name: "${bms0} password"
+    device_type:
+      name: "${bms0} device type"
+    software_version:
+      name: "${bms0} software version"
+    manufacturer:
+      name: "${bms0} manufacturer"
+    total_runtime_formatted:
+      name: "${bms0} total runtime formatted"
+
+  - platform: jk_bms
+    jk_bms_id: bms1
+    errors:
+      name: "${bms1} errors"
+      id: bms1errors
+    operation_mode:
+      name: "${bms1} operation mode"
+    battery_type:
+      name: "${bms1} battery type"
+    password:
+      name: "${bms1} password"
+    device_type:
+      name: "${bms1} device type"
+    software_version:
+      name: "${bms1} software version"
+    manufacturer:
+      name: "${bms1} manufacturer"
+    total_runtime_formatted:
+      name: "${bms1} total runtime formatted"      

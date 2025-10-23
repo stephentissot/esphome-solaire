@@ -1,0 +1,905 @@
+esphome:
+  name: esppv1
+  friendly_name: ESPPV1
+  on_boot:
+    - delay: 5s
+    - lvgl.widget.hide: boot_screen
+
+<<: !include include/fonts.yaml
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+# Enable logging
+logger:
+  level: INFO
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "qbQMHRzL8sCewWmiMBuEPlzrwcROCmcrkR0/P/mXBo8="
+  on_client_connected:
+    - if:
+        condition:
+          lambda: 'return (0 == client_info.find("Home Assistant "));'
+        then:
+          - lvgl.widget.show: lbl_hastatus
+  on_client_disconnected:
+    - if:
+        condition:
+          lambda: 'return (0 == client_info.find("Home Assistant "));'
+        then:
+          - lvgl.widget.hide: lbl_hastatus
+
+ota:
+  - platform: esphome
+    password: "ee3decad52d9bcf5e3162398f8f662d3"
+    on_begin:  # prevent screen flickering during OTA
+      - light.turn_off:
+          id: display_backlight
+          transition_length: 0s
+      - lambda: "id(display_backlight).loop();"    
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esppv1 Fallback Hotspot"
+    password: "rDcqaPvIQ4uO"
+
+captive_portal:
+
+switch:
+  - platform: gpio
+    name: Relay 1
+    pin:
+      number: GPIO40
+      inverted: true
+
+
+output:
+  - platform: ledc
+    id: backlight_output
+    pin: GPIO38
+    frequency: 150Hz
+    min_power: 0.01
+    zero_means_zero: true
+
+light:
+  - platform: monochromatic
+    name: Backlight
+    id: display_backlight
+    output: backlight_output
+    restore_mode: ALWAYS_ON
+    default_transition_length: 1s
+
+spi:
+  - id: lcd_spi
+    clk_pin: GPIO48
+    mosi_pin: GPIO47
+
+i2c:
+  id: touchscreen_bus
+  sda: GPIO19
+  scl:
+    number: 45
+    ignore_strapping_warning: true
+
+display:
+  - platform: st7701s
+    id: tft_display
+    dimensions:
+      width: 480
+      height: 480
+#    rotation: 270    #uncomment for placement with down-facing USB socket
+    spi_mode: MODE3
+    data_rate: 2MHz
+    color_order: RGB
+    invert_colors: False
+    cs_pin: 39
+    de_pin: 18
+    hsync_pin: 16
+    vsync_pin: 17
+    pclk_pin: 21
+    pclk_frequency: 12MHz
+    pclk_inverted: False
+    hsync_pulse_width: 8
+    hsync_front_porch: 10
+    hsync_back_porch: 20
+    vsync_pulse_width: 8
+    vsync_front_porch: 10
+    vsync_back_porch: 10
+    update_interval: never
+    auto_clear_enabled: False
+    init_sequence:
+      - 1
+      - [0xFF, 0x77, 0x01, 0x00, 0x00, 0x10] # CMD2_BKSEL_BK0
+      - [0xCD, 0x00] # disable MDT flag
+    data_pins:
+      red: [11, 12, 13, 14, 0]
+      green: [8, 20, 3, 46, 9, 10]
+      blue: [4, 5, 6, 7, 15]
+
+touchscreen:
+  - platform: gt911
+    id: tft_touch
+    display: tft_display
+#    transform:     #uncomment for placement with down-facing USB socket
+#      swap_xy: true
+#      mirror_x: true
+
+sensor:
+  - platform: homeassistant
+    name: "Battery 1 SOC"
+    entity_id: sensor.espbms_rs485_bms0_capacity_remaining
+    id: batt1Soc
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: display_soc1Value
+            text:
+              format: "%3.1f %%"
+              args: [ 'x' ]        
+        - lvgl.label.update:
+            id: display_soc1
+            text: !lambda |-
+                if(x>95){
+                  return "\U000F0079"; // Full
+                }
+                else if(x>85){
+                  return "\U000F0082"; // 90%
+                }
+                else if(x>75){
+                  return "\U000F0081"; // 80%
+                }
+                else if(x>65){
+                  return "\U000F0080"; // 70%
+                }          
+                else if(x>55){
+                  return "\U000F007F"; // 60%
+                }
+                else if(x>45){
+                  return "\U000F007E"; // 50%
+                }
+                else if(x>35){
+                  return "\U000F007D"; // 40%
+                }
+                else if(x>25){
+                  return "\U000F007C"; // 30%
+                }
+                else if(x>15){
+                  return "\U000F007B"; // 20%
+                }
+                else if(x>5){
+                  return "\U000F007A"; // 10%
+                }
+                else if(x>=0){
+                  return "\U000F008E"; // Empty
+                }                
+                else {
+                return "\U000F0091";
+                }
+  - platform: homeassistant
+    name: "Battery 2 SOC"
+    entity_id: sensor.espbms_rs485_bms1_capacity_remaining
+    id: batt2Soc
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: display_soc2Value
+            text:
+              format: "%3.1f %%"
+              args: [ 'x' ]        
+        - lvgl.label.update:
+            id: display_soc2
+            text: !lambda |-
+                if(x>95){
+                  return "\U000F0079"; // Full
+                }
+                else if(x>85){
+                  return "\U000F0082"; // 90%
+                }
+                else if(x>75){
+                  return "\U000F0081"; // 80%
+                }
+                else if(x>65){
+                  return "\U000F0080"; // 70%
+                }          
+                else if(x>55){
+                  return "\U000F007F"; // 60%
+                }
+                else if(x>45){
+                  return "\U000F007E"; // 50%
+                }
+                else if(x>35){
+                  return "\U000F007D"; // 40%
+                }
+                else if(x>25){
+                  return "\U000F007C"; // 30%
+                }
+                else if(x>15){
+                  return "\U000F007B"; // 20%
+                }
+                else if(x>5){
+                  return "\U000F007A"; // 10%
+                }
+                else if(x>=0){
+                  return "\U000F008E"; // Empty
+                }                
+                else {
+                return "\U000F0091";
+                }   
+
+  - platform: homeassistant
+    name: "Day PV Energy"
+    entity_id: sensor.espdeye_deye_day_pv_energy
+    id: espdeye_deye_day_pv_energy
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: display_deye_day_pv_energy
+            text:
+              format: "%3.1f kWh"
+              args: [ 'x' ]
+        - lvgl.label.update:
+            id: display_mpptTotal
+            text:
+              format: "%5.0f W"
+              args: [ 'id(pv1p).state + id(pv2p).state' ]
+        - lvgl.label.update:
+            id: display_mpptTotalPercent
+            text:
+              format: "%3.0f %"
+              args: [ '(id(pv1p).state + id(pv2p).state)/10700*100' ]              
+        - if:
+            condition:
+                lambda: return x>0;
+            then:
+              - lvgl.obj.update:
+                  id: total_jour
+                  styles: active
+            else:
+              - lvgl.obj.update:
+                  id: total_jour
+                  styles: inactive       
+  - platform: homeassistant
+    name: "Solar Power"
+    entity_id: sensor.espdeye_deye_solar_power
+    id: pvpower
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: display_mpptTotal
+            text:
+              format: "%5.0f W"
+              args: [ 'x' ]
+        - lvgl.label.update:
+            id: display_mpptTotalPercent
+            text:
+              format: "%3.0f %%"
+              args: [ 'x/10700*100' ]
+        - if:
+            condition:
+                lambda: return x>0;
+            then:
+              - lvgl.obj.update:
+                  id: mpptTotal
+                  styles: active
+            else:
+              - lvgl.obj.update:
+                  id: mpptTotal
+                  styles: inactive                     
+
+  - platform: homeassistant
+    name: "PV1 Voltage"
+    entity_id: sensor.espdeye_deye_pv1_voltage
+    id: pv1v_ha
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: pv1vLabel
+            text:
+              format: "%3.0f V"
+              args: [ 'x' ]     
+        - lvgl.label.update:
+            id: display_pv1v
+            text:
+              format: "%3.0f V"
+              args: [ 'x' ]     
+  - platform: homeassistant
+    name: "PV1 Current"
+    entity_id: sensor.espdeye_deye_pv1_current
+    id: pv1c_ha
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: pv1cLabel
+            text:
+              format: "%2.1f A"
+              args: [ 'x' ]   
+        - lvgl.label.update:
+            id: display_pv1c
+            text:
+              format: "%2.0f A"
+              args: [ 'x' ]                 
+
+  - platform: homeassistant
+    name: "PV1 Power"
+    entity_id: sensor.espdeye_deye_pv1_power    
+    id: pv1p_ha
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: pv1pLabel
+            text:
+              format: "%4.0f W"
+              args: [ 'x' ]        
+        - lvgl.label.update:
+            id: display_pv1p
+            text:
+              format: "%4.0f W"
+              args: [ 'x' ]
+        - lvgl.label.update:
+            id: display_pv1percent
+            text:
+              format: "%3.0f %%"
+              args: [ '(x/7140*100)' ]
+        - if:
+            condition:
+                lambda: return x>0;
+            then:
+              - lvgl.obj.update:
+                  id: mppt1
+                  styles: active
+            else:
+              - lvgl.obj.update:
+                  id: mppt1
+                  styles: inactive              
+  - platform: template
+    update_interval: 1s
+    id: pv1v
+    unit_of_measurement: V
+    lambda: |-
+      if(isnan(id(pv1v_ha).state)){return 0;} else {return id(pv1v_ha).state;}
+
+  - platform: template
+    update_interval: 1s
+    id: pv1c
+    unit_of_measurement: A
+    lambda: |-
+      if(isnan(id(pv1c_ha).state)){return 0;} else {return id(pv1c_ha).state;}      
+
+  - platform: template
+    update_interval: 1s
+    id: pv1p
+    unit_of_measurement: W
+    lambda: |-
+      if(isnan(id(pv1p_ha).state)){return 0;} else {return id(pv1p_ha).state;}
+
+  - platform: homeassistant
+    name: "PV2 Voltage"
+    entity_id: sensor.espdeye_deye_pv2_voltage
+    id: pv2v_ha
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: pv2vLabel
+            text:
+              format: "%3.0f V"
+              args: [ 'x' ]         
+        - lvgl.label.update:
+            id: display_pv2v
+            text:
+              format: "%3.0f V"
+              args: [ 'x' ]
+  - platform: homeassistant
+    name: "PV2 Current"
+    entity_id: sensor.espdeye_deye_pv2_current
+    id: pv2c_ha
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: pv2cLabel
+            text:
+              format: "%2.1f A"
+              args: [ 'x' ]       
+        - lvgl.label.update:
+            id: display_pv2c
+            text:
+              format: "%2.1f A"
+              args: [ 'x' ] 
+  - platform: homeassistant
+    name: "PV2 Power"
+    entity_id: sensor.espdeye_deye_pv2_power    
+    id: pv2p_ha
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: pv2pLabel
+            text:
+              format: "%4.0f W"
+              args: [ 'x' ]
+        - lvgl.label.update:
+            id: display_pv2p
+            text:
+              format: "%4.0f W"
+              args: [ 'x' ]
+        - lvgl.label.update:
+            id: display_pv2percent
+            text:
+              format: "%3.0f %%"
+              args: [ 'x/3570*100' ]
+        - if:
+            condition:
+                lambda: return x>0;
+            then:
+              - lvgl.obj.update:
+                  id: mppt2
+                  styles: active
+            else:
+              - lvgl.obj.update:
+                  id: mppt2
+                  styles: inactive  
+
+
+  - platform: template
+    update_interval: 1s
+    id: pv2v
+    unit_of_measurement: V
+    lambda: |-
+      if(isnan(id(pv2v_ha).state)){return 0;} else {return id(pv2v_ha).state;}
+
+  - platform: template
+    update_interval: 1s
+    id: pv2c
+    unit_of_measurement: A
+    lambda: |-
+      if(isnan(id(pv2c_ha).state)){return 0;} else {return id(pv2c_ha).state;}      
+
+  - platform: template
+    update_interval: 1s
+    id: pv2p
+    unit_of_measurement: W
+    lambda: |-
+      if(isnan(id(pv2p_ha).state)){return 0;} else {return id(pv2p_ha).state;}      
+
+time:
+- platform: homeassistant
+  id: my_time
+
+
+color:
+  - id: paper_white # Really black, but will appear white on e-paper
+    hex: "000000"
+  - id: paper_black # Really white, but will appear black on e-paper
+    hex: "FFFFFF"
+
+lvgl:
+  bg_color: 0x000000
+  displays:
+    - tft_display
+  theme:
+    #label:
+      #text_font: my_font # set all your labels to use your custom defined font
+    button:
+      bg_color: 0x2F8CD8
+      bg_grad_color: 0x005782
+      bg_grad_dir: VER
+      bg_opa: COVER
+      border_color: 0x0077b3
+      border_width: 1
+      text_color: 0xFFFFFF
+      pressed: # set some button colors to be different in pressed state
+        bg_color: 0x006699
+        bg_grad_color: 0x00334d
+      checked: # set some button colors to be different in checked state
+        bg_color: 0x1d5f96
+        bg_grad_color: 0x03324A
+        text_color: 0xfff300
+    buttonmatrix:
+      bg_opa: TRANSP
+      border_color: 0x0077b3
+      border_width: 0
+      text_color: 0xFFFFFF
+      pad_all: 0
+      items: # set all your buttonmatrix buttons to use your custom defined styles and font
+        bg_color: 0x2F8CD8
+        bg_grad_color: 0x005782
+        bg_grad_dir: VER
+        bg_opa: COVER
+        border_color: 0x0077b3
+        border_width: 1
+        text_color: 0xFFFFFF
+        #text_font: my_font
+        pressed:
+          bg_color: 0x006699
+          bg_grad_color: 0x00334d
+        checked:
+          bg_color: 0x1d5f96
+          bg_grad_color: 0x03324A
+          text_color: 0x005580
+    switch:
+      bg_color: 0xC0C0C0
+      bg_grad_color: 0xb0b0b0
+      bg_grad_dir: VER
+      bg_opa: COVER
+      checked:
+        bg_color: 0x1d5f96
+        bg_grad_color: 0x03324A
+        bg_grad_dir: VER
+        bg_opa: COVER
+      knob:
+        bg_color: 0xFFFFFF
+        bg_grad_color: 0xC0C0C0
+        bg_grad_dir: VER
+        bg_opa: COVER
+    slider:
+      border_width: 1
+      border_opa: 15%
+      bg_color: 0xcccaca
+      bg_opa: 15%
+      indicator:
+        bg_color: 0x1d5f96
+        bg_grad_color: 0x03324A
+        bg_grad_dir: VER
+        bg_opa: COVER
+      knob:
+        bg_color: 0x2F8CD8
+        bg_grad_color: 0x005782
+        bg_grad_dir: VER
+        bg_opa: COVER
+        border_color: 0x0077b3
+        border_width: 1
+        text_color: 0xFFFFFF
+  style_definitions:
+    - id: header_footer
+      bg_color: 0x666666
+      bg_grad_color: 0x222222
+      bg_grad_dir: VER
+      bg_opa: COVER
+      border_opa: TRANSP
+      radius: 0
+      pad_all: 0
+      pad_row: 0
+      pad_column: 0
+      border_color: 0x666666
+      text_color: 0xFFFFFF
+      width: 100%
+      height: 30
+    - id: inactive
+      bg_color: 0x000000
+      radius: 5
+      border_color: 0x555555
+      text_color: 0x555555
+      width: 100%
+    - id: active
+      bg_color: 0x000000
+      radius: 5
+      border_color: 0xFFA500
+      text_color: 0xFFA500
+      width: 100%
+
+  top_layer:
+    widgets:
+      - label:
+          text: "\uF1EB"
+          id: lbl_hastatus
+          hidden: true
+          align: top_right
+          x: -2
+          y: 7
+          text_align: right
+          text_color: 0xffffff
+      - buttonmatrix:
+          align: bottom_mid
+          styles: header_footer
+          pad_all: 0
+          outline_width: 0
+          id: top_layer
+          items:
+            styles: header_footer
+          rows:
+            - buttons:
+              - id: page_prev
+                text: "\uF053"
+                on_press:
+                  then:
+                    lvgl.page.previous:
+              - id: page_home
+                text: "\uF015"
+                on_press:
+                  then:
+                    lvgl.page.show: main_page
+              - id: page_next
+                text: "\uF054"
+                on_press:
+                  then:
+                    lvgl.page.next:
+      - obj:
+          id: boot_screen
+          x: 0
+          y: 0
+          width: 100%
+          height: 100%
+          bg_color: 0x000000
+          bg_opa: COVER
+          radius: 0
+          pad_all: 0
+          border_width: 0
+          widgets:
+            - image:
+                align: CENTER
+                src: logoBigsister
+                y: -40
+            - spinner:
+                align: CENTER
+                y: 95
+                height: 50
+                width: 50
+                spin_time: 1s
+                arc_length: 60deg
+                arc_width: 8
+                indicator:
+                  arc_color: 0x18bcf2
+                  arc_width: 8
+          on_press:
+            - lvgl.widget.hide: boot_screen
+
+  pages:    
+    - id: main_page
+      on_swipe_right:
+        - lvgl.page.previous:
+      on_swipe_left:
+        - lvgl.page.next:    
+      widgets:
+        - obj: # Total jour
+            id: total_jour
+            x: 10
+            y: 10
+            width: 220
+            height: 80
+            styles: inactive
+            widgets:
+            - label:
+                text: "\U000F0A72"
+                text_font: mdiFont
+                align: LEFT_MID
+            - label:
+                id: display_deye_day_pv_energy
+                text_font: roboto_25
+                align: TOP_RIGHT
+            - label:
+                text_font: roboto_15
+                text: "Production (jour)"
+                align: BOTTOM_RIGHT     
+        - obj: # MPPT 1 EST
+            id: mppt1
+            x: 10
+            y: 91
+            width: 110
+            height: 110
+            styles: inactive
+            widgets:
+            - label:
+                id: display_pv1p    #POWER
+                text_font: roboto_25
+                align: TOP_MID                
+            - label:
+                text: "Est"
+                text_font: roboto_15
+                align: LEFT_MID
+            - label:
+                id: display_pv1v    #Voltage
+                text_font: roboto_15
+                align: RIGHT_MID
+            - label:
+                id: display_pv1percent    #Percent
+                text_font: roboto_15
+                align: BOTTOM_LEFT
+            - label:
+                id: display_pv1c    #Current
+                text_font: roboto_15
+                align: BOTTOM_RIGHT
+        - obj: # MPPT 2 SUD
+            id: mppt2
+            x: 121
+            y: 91
+            width: 110
+            height: 110
+            styles: inactive
+            widgets:
+            - label:
+                id: display_pv2p    #POWER
+                text_font: roboto_25
+                align: TOP_MID                
+            - label:
+                text: "Sud"
+                text_font: roboto_15
+                align: LEFT_MID
+            - label:
+                id: display_pv2v    #Voltage
+                text_font: roboto_15
+                align: RIGHT_MID
+            - label:
+                id: display_pv2percent    #Percent
+                text_font: roboto_15
+                align: BOTTOM_LEFT
+            - label:
+                id: display_pv2c    #Current
+                text_font: roboto_15
+                align: BOTTOM_RIGHT 
+        - obj: # MPPT TOTAL
+            id: mpptTotal
+            x: 10
+            y: 201
+            width: 220
+            height: 50
+            styles: inactive
+            widgets:
+            - label:
+                id: display_mpptTotal    #TOTAL POWER
+                text_font: roboto_25
+                align: CENTER
+            - label:
+                id: display_mpptTotalPercent    #TOTAL %
+                text_font: roboto_15
+                align: BOTTOM_RIGHT      
+        - obj: # Batterie 1
+            x: 10
+            y: 255
+            width: 110
+            height: 190
+            styles: inactive
+            widgets:
+            - label:
+                id: display_soc1Value    #SOC value
+                text_font: roboto_15
+                align: TOP_MID 
+            - label:
+                id: display_soc1    #SOC icon
+                text_font: battery_icons_50
+                align: CENTER                 
+        - obj: # Batterie 2
+            x: 121
+            y: 255
+            width: 110
+            height: 190
+            styles: inactive
+            widgets:
+            - label:
+                id: display_soc2Value    #SOC value
+                text_font: roboto_15
+                align: TOP_MID 
+            - label:
+                id: display_soc2    #SOC icon
+                text_font: battery_icons_50
+                align: CENTER   
+    - id: page1
+      on_swipe_right:
+        - lvgl.page.previous:
+      on_swipe_left:
+        - lvgl.page.next:        
+      widgets:
+        - obj:
+            align: TOP_MID
+            styles: header_footer
+            widgets:
+              - label:
+                  text: "MPPT Status"
+                  align: CENTER
+                  text_align: CENTER
+                  text_color: 0xFFFFFF
+        - obj: # a properly placed coontainer object for all these controls
+            align: CENTER
+            width: 480
+            height: 256
+            bg_color: 0x555555
+            border_color: 0xffffff 
+
+            layout:
+              type: GRID
+              grid_columns: [FR(1), FR(1)] # equal
+              grid_rows: [FR(25), FR(25), FR(25), FR(25)] # like percents              
+            widgets:
+              - label:
+                  text: "MPPT 1 EST"
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  grid_cell_column_pos: 0 # place the widget in
+                  grid_cell_row_pos: 0 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER     
+              - label:
+                  id: pv1pLabel
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  width: 240
+                  height: 68
+                  grid_cell_column_pos: 0 # place the widget in
+                  grid_cell_row_pos: 1 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER
+              - label:
+                  id: pv1vLabel
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  width: 240
+                  height: 68
+                  grid_cell_column_pos: 0 # place the widget in
+                  grid_cell_row_pos: 2 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER
+              - label:
+                  id: pv1cLabel
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  width: 240
+                  height: 68
+                  grid_cell_column_pos: 0 # place the widget in
+                  grid_cell_row_pos: 3 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER
+              - label:
+                  text: "MPPT 2 SUD"
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  grid_cell_column_pos: 1 # place the widget in
+                  grid_cell_row_pos: 0 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER
+              - label:
+                  id: pv2pLabel
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  width: 240
+                  height: 68
+                  grid_cell_column_pos: 1 # place the widget in
+                  grid_cell_row_pos: 1 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER
+              - label:
+                  id: pv2vLabel
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  width: 240
+                  height: 68
+                  grid_cell_column_pos: 1 # place the widget in
+                  grid_cell_row_pos: 2 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER
+              - label:
+                  id: pv2cLabel
+                  text_font: roboto_25
+                  text_color: 0xFFFFFF
+                  width: 240
+                  height: 68
+                  grid_cell_column_pos: 1 # place the widget in
+                  grid_cell_row_pos: 3 # the corresponding cell
+                  grid_cell_x_align: CENTER
+                  grid_cell_y_align: STRETCH
+                  text_align: CENTER
+
+image:
+  - file: "images/Logo.jpg"
+    type: rgb565
+    transparency: opaque
+    id: logoBigsister
+  - file: mdi:solar-power
+    id: mdi_solar_power
+    type: grayscale
+    transparency: alpha_channel
+    resize: 80x80
