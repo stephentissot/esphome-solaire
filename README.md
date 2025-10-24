@@ -7,18 +7,27 @@ le RS485 utilisé côté JK n'est pas celui utilisé pour la connection en parallèle
 <b>espdeye.yaml</b> : Testé sur un Deye SUN-8K-SG05-LP1-EU SM2
 Sur cet onduleur, ne pas utiliser les fils 1/2 du RJ45 "BMS" (marque RS485/CAN), mais le connecteur RJ45 marqué modbus
 
-A venir : schema électronique et matériel utilisé.
-
 Carte Home Assistant utilisée pour le Deye : https://github.com/slipx06/sunsynk-power-flow-card
 
 <H3>Matériel utilisé</H3>
 
 
-L'ESP32: j'ai choisi un wt32_ETH01 car il intègre un module Ethernet (LAN8720) et un module WiFi. Dans le fichier espdeye.yaml, c'est l'ethernet qui est utilisé.
+<b>ESP32</b> : j'ai choisi un wt32_ETH01 car il intègre un module Ethernet (LAN8720) et un module WiFi. Dans le fichier espdeye.yaml, c'est l'ethernet qui est utilisé.
 <br/>
 <img src="images/wt32_pinout_large.png" alt="WT32_ETH01" width="300">
+<br/><br/>
+Trouvé sur Amazon pour 27€ (les deux) : https://amzn.eu/d/4BWDEwn
+<br/>
+<b>Adaptateur RS485 -> TTL</b> : Utiliser un module avec contrôle automatique de flux.<br/>
+<img src="images/RS485toUart.jpg" alt="Rs485ToUart" width="300">
+<br/>
+Trouvé sur Amazon pour 7€ (les 5) : https://amzn.eu/d/4MC09HF
+<br/><br/>
+<b>Ecran Oled 0.96" I2C</b> (optionnel) : pour afficher les données localement sur l'ESP32.<br/>
+<img src="images/oled.jpg" alt="OLED" width="300">
+<br/>Trouvé sur Amazon pour 17€ (les 6) : https://amzn.eu/d/6elGV45
 
-
+<br/>
 <h3>Schéma de câblage</h3>
 
 
