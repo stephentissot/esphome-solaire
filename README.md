@@ -41,7 +41,7 @@ Donc pour ce modèle, 2 RJ45 sortent du Deye (BMS et Modbus) et donc l'ESPDeye n'
 <br/>
 Dans mon cas, j'ai connecté la masse (3) du Deye à la masse (GND) du convertisseur RS485/TTL pour éviter des problèmes de communication. Mais j'ai lu que dans certain cas, il était nécessaire de ne pas la connecter.
 <br/>
-<img src="images/deye.jpg" alt="Schema" width="300">
+<img src="images/Deye.jpg" alt="Schema" width="300">
 <br/>
 <i>SUN-8K_SG05LP1-EU-SM2</i>
 <br/>
