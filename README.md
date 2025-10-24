@@ -24,7 +24,7 @@ Trouvé sur Amazon pour 27€ (les deux) : https://amzn.eu/d/4BWDEwn
 Trouvé sur Amazon pour 7€ (les 5) : https://amzn.eu/d/4MC09HF
 <br/><br/>
 <b>Ecran Oled 0.96" I2C</b> (optionnel) : pour afficher les données localement sur l'ESP32.<br/>
-<img src="images/oled.jpg" alt="OLED" width="300">
+<img src="images/Oled.JPG" alt="OLED" width="300">
 <br/>Trouvé sur Amazon pour 17€ (les 6) : https://amzn.eu/d/6elGV45
 
 <br/>
