@@ -63,7 +63,7 @@ Ayant 2 batteries, donc 2 BMS, un master et un slave, j'ai essayé de n'utiliser 
 J'ai donc utilisé 2 modules RS485/TTL, un pour chaque BMS.
 <br/><br/>
 
-<img src="images/jkbms.jpg" alt="Schema" width="300">
+<img src="images/jkbms.jpg" alt="Schema" width="600">
 <br/>
 <i>JK-B2A16S</i>
 <br/>
