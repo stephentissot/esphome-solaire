@@ -17,6 +17,6 @@ Pas de micro-onduleurs, tout est centralisé via l'onduleur hybride Deye.
 <br>En cas de surplus de production, si la batterie est pleine, si le cumulus est off, le Deye baisse automatiquement la puissance PC afin de ne rien injecter sur le réseau ENEDIS.
 <H2>Schema unifilaire</H2>
 Le schéma a été réalisé avec le logiciel <a href="https://qelectrotech.org/download.php">QElectroTech</a>
-<img src="../images/SchemaUnifilaire.JPG" alt="Schema" width="500">
+<img src= "images/SchemaUnifilaire.JPG" alt="Schema" width="500">
 <br/>
 La version .qet est disponible dans le dépôt github.
