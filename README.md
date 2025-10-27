@@ -26,8 +26,18 @@ Trouvé sur Amazon pour 7€ (les 5) : https://amzn.eu/d/4MC09HF
 <b>Ecran Oled 0.96" I2C</b> (optionnel) : pour afficher les données localement sur l'ESP32.<br/>
 <img src="images/Oled.JPG" alt="OLED" width="300">
 <br/>Trouvé sur Amazon pour 17€ (les 6) : https://amzn.eu/d/6elGV45
-
-<br/>
+<br/><br/>
+Afin de programmer (la première fois) l'ESP32, il faut utiliser un convertisseur USB -> TTL 3.3V. J'ai choisi un module CP2102.
+<br/> Trouvé sur Amazon pour 8€ : https://amzn.eu/d/edas5XW
+<br/>Cette carte doit être connectée ainsi : <br/>
+USB->TTL //// WT32-ETH01<br/>
+GND ------> GND<br/>
+TX ------> RX0 (not RXD)<br/>
+RX ------> TX0 (not RXD)<br/>
+5V ------> 5V<br/>
+Et lors de la programmation, connectez la pin IO0 (à côté de RX0) à GND pour passer en mode flash.
+<br/>Plus d'infos ici: https://community.home-assistant.io/t/how-i-installed-esphome-on-the-wt32-eth01/359027
+<br/><br/>
 <h3>Schéma de câblage</h3>
 
 
