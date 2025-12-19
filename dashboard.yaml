@@ -1,0 +1,81 @@
+type: custom:sunsynk-power-flow-card
+cardstyle: full
+show_solar: true
+battery:
+  energy: 32153
+  shutdown_soc: 25
+  show_daily: true
+  count: 2
+  shutdown_soc_offgrid: 25
+  soc_end_of_charge: 100
+  show_remaining_energy: true
+  soc_decimal_places: 0
+  hide_soc: true
+  remaining_energy_to_shutdown: true
+solar:
+  show_daily: true
+  mppts: 2
+  pv1_name: Est
+  pv2_name: Sud
+  pv2_max_power: 3570
+  pv1_max_power: 7140
+  max_power: 10710
+load:
+  show_daily: true
+  essential_name: LOAD
+  additional_loads: 2
+  load1_name: BigSister Desk
+  load1_icon: mdi:desktop-classic
+  load2_name: BigSister Lab
+  load2_icon: mdi:gitlab
+grid:
+  show_daily_buy: true
+  show_daily_sell: false
+  show_nonessential: true
+entities:
+  use_timer_248: switch.espdeye_deye_toggle_system_timer
+  priority_load_243: switch.espdeye_deye_toggle_priority_load
+  inverter_voltage_154: sensor.espdeye_deye_inverter_voltage
+  load_frequency_192: sensor.espdeye_deye_load_frequency
+  inverter_current_164: sensor.espdeye_deye_inverter_current
+  inverter_power_175: sensor.espdeye_deye_inverter_power
+  grid_connected_status_194: binary_sensor.espdeye_deye_grid_connected_status
+  inverter_status_59: sensor.espdeye_deye_overall_state
+  day_battery_charge_70: sensor.espdeye_deye_day_battery_charge
+  day_battery_discharge_71: sensor.espdeye_deye_day_battery_discharge
+  battery_voltage_183: sensor.espdeye_deye_battery_voltage
+  battery_soc_184: sensor.espdeye_deye_battery_soc
+  battery_power_190: sensor.espdeye_deye_battery_power
+  battery_current_191: sensor.espdeye_deye_battery_current
+  grid_power_169: sensor.espdeye_deye_grid_power
+  day_grid_import_76: sensor.espdeye_deye_day_grid_import
+  day_grid_export_77: sensor.espdeye_deye_day_grid_export
+  grid_ct_power_172: sensor.espdeye_deye_grid_ct_power
+  day_load_energy_84: sensor.espdeye_deye_day_load_energy
+  essential_power: sensor.espdeye_deye_essential_power
+  nonessential_power: sensor.espdeye_deye_nonessential_power
+  aux_power_166: sensor.espdeye_deye_aux_power
+  day_pv_energy_108: sensor.espdeye_deye_day_pv_energy
+  pv1_power_186: sensor.espdeye_deye_pv1_power
+  pv2_power_187: sensor.espdeye_deye_pv2_power
+  pv1_voltage_109: sensor.espdeye_deye_pv1_voltage
+  pv1_current_110: sensor.espdeye_deye_pv1_current
+  pv2_voltage_111: sensor.espdeye_deye_pv2_voltage
+  pv2_current_112: sensor.espdeye_deye_pv2_current
+  essential_load1: sensor.bigsister_alim_1_power
+  essential_load2: sensor.bigsister_alim_2_power
+inverter:
+  model: deye
+  modern: true
+  autarky: power
+wide: false
+show_battery: true
+show_grid: true
+card_width: 60%
+battery2:
+  soc_end_of_charge: 100
+  shutdown_soc: 25
+  shutdown_soc_offgrid: 25
+  soc_decimal_places: 2
+  auto_scale: false
+  show_remaining_energy: false
